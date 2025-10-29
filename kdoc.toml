@@ -5,7 +5,7 @@ ignore_indented = true
 scan_root = './'
 scan_exclusions = ['*.mod', '*.sum']
 output_path = './docs'
-git_avatar_size = 40
+git_avatar_size = 32
 
 [extensions_to_langs]
 '.go' = 'go'

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kociumba/kdoc/config"
 	"github.com/kociumba/kdoc/git"
 )
 
@@ -308,13 +309,10 @@ func (p *Parser) generateDetailedCard(f *File) string {
 		sb.WriteString("<div>\n")
 
 		for _, author := range f.GitInfo.Authors {
-			avatarURL := git.GetAvatarURL(p.RepoInfo, author, 40)
-			sb.WriteString("<div>\n")
+			avatarURL := git.GetAvatarURL(p.RepoInfo, author, config.CFG.GitAvatarSize)
 			sb.WriteString(fmt.Sprintf(
-				"<img src=\"%s\" alt=\"%s\" width=\"32\" height=\"32\" />\n",
-				avatarURL, author.Name))
-			sb.WriteString(fmt.Sprintf("<span>%s</span>\n", author.Name))
-			sb.WriteString("</div>\n")
+				"<img src=\"%s\" alt=\"%s\" width=\"%d\" height=\"%d\" />\n",
+				avatarURL, author.Name, config.CFG.GitAvatarSize, config.CFG.GitAvatarSize))
 		}
 
 		sb.WriteString("</div>\n")

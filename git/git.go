@@ -150,7 +150,8 @@ func GetFileInfo(repoPath, filePath string) (*FileInfo, error) {
 		info.TotalCommits = len(lines)
 	}
 
-	cmd = exec.Command("git", "-C", repoPath, "shortlog", "-sne", "--follow", "--", filePath)
+	// git will fail silently here without specifiying "HEAD" since there is not tty attached, stupid default behaviour
+	cmd = exec.Command("git", "-C", repoPath, "shortlog", "-sne", "--follow", "HEAD", "--", filePath)
 	out, err = cmd.Output()
 	if err == nil {
 		authorMap := make(map[string]Author)

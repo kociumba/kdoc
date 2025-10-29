@@ -24,7 +24,7 @@ var CFG = Config{
 	ScanExclusions:    []string{"*.md", "*.txt", "*.cmake", "cmake-build-*"},
 	OutputPath:        "./docs",
 	ExtensionsToLangs: map[string]string{".cpp": "cpp", ".c": "c", ".h": "cpp", ".hpp": "cpp"},
-	GitAvatarSize:     40,
+	GitAvatarSize:     32,
 }
 
 // testing comment, loads the config
