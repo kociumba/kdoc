@@ -1,5 +1,5 @@
 // This is the main implementation for kdoc
-// > this comment is mainly here for testing the tools itself
+// > this comment is mainly here for testing the tool itself
 //
 // it is a "dumb" code documentation generator, this means that kdoc unlike generators
 // such as doxygen or godoc does not actually understand the code it generates the docs for
@@ -166,7 +166,7 @@ var cmds = []*cli.Command{
 			if enableGit {
 				p.RepoInfo = git.GetRepoInfo(scan_root)
 				if p.RepoInfo.IsRepo {
-					log.Printf("Git repository detected: %s/%s", p.RepoInfo.RepoOwner, p.RepoInfo.RepoName)
+					fmt.Printf("Git repository detected: %s/%s\n", p.RepoInfo.RepoOwner, p.RepoInfo.RepoName)
 				} else {
 					log.Printf("Not a git repository, skipping git metadata")
 					enableGit = false
@@ -184,16 +184,25 @@ var cmds = []*cli.Command{
 			}
 
 			matchedFiles := collectFiles(scan_root, scan_excludes, config.CFG.ExtensionsToLangs)
-			if len(matchedFiles) == 0 {
+			totalFiles := len(matchedFiles)
+			if totalFiles == 0 {
 				return fmt.Errorf("no files matched extensions in %s\nConfigured extensions: %v", scan_root, config.CFG.ExtensionsToLangs)
 			}
 
-			for _, filePath := range matchedFiles {
+			for i, filePath := range matchedFiles {
 				ext := filepath.Ext(filePath)
 				lang, ok := config.CFG.ExtensionsToLangs[ext]
 				if !ok {
 					continue
 				}
+
+				displayPath, err := filepath.Rel(scan_root, filePath)
+				if err != nil {
+					displayPath = filePath
+				}
+				displayPath = filepath.ToSlash(displayPath)
+
+				fmt.Printf("\x1b[2K\r[%d/%d] Processing: %s", i+1, totalFiles, displayPath)
 
 				var f parser.File
 				f.Language = lang
@@ -227,6 +236,8 @@ var cmds = []*cli.Command{
 				p.Files = append(p.Files, f)
 			}
 
+			fmt.Printf("\x1b[2K\r[%d/%d] Processing complete\n", totalFiles, totalFiles)
+
 			linkIndex := make(map[string]string)
 			for _, f := range p.Files {
 				outFile := outputFilename(scan_root, f.Path, out, filepath.Ext(f.Path))
@@ -246,7 +257,8 @@ var cmds = []*cli.Command{
 				}
 			}
 
-			for _, f := range p.Files {
+			write_range := len(p.Files)
+			for i, f := range p.Files {
 				outFile := outputFilename(scan_root, f.Path, out, filepath.Ext(f.Path))
 				outDir := filepath.Dir(outFile)
 				if err := os.MkdirAll(outDir, 0755); err != nil {
@@ -254,11 +266,15 @@ var cmds = []*cli.Command{
 					continue
 				}
 
+				fmt.Printf("\x1b[2K\r[%d/%d] Writing: %s", i+1, write_range, outFile)
+
 				mdContent := p.GenerateMarkdownForFile(&f)
 				if err := os.WriteFile(outFile, []byte(mdContent), 0644); err != nil {
 					log.Printf("Error writing %s: %v", outFile, err)
 				}
 			}
+
+			fmt.Printf("\x1b[2K\r[%d/%d] Writing docs complete\n", write_range, write_range)
 
 			return nil
 		},
