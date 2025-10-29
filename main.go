@@ -1,4 +1,5 @@
-// this is the main implementation for kdoc
+// This is the main implementation for kdoc
+// > this comment is mainly here for testing the tools itself
 //
 // it is a "dumb" code documentation generator, this means that kdoc unlike generators
 // such as doxygen or godoc does not actually understand the code it generates the docs for
@@ -91,59 +92,58 @@ func outputFilename(scan_root, file_path, out_path, ext string) string {
 	return filepath.ToSlash(out_rel)
 }
 
-func main() {
-	cmd := &cli.Command{
-		Name:  "kdoc",
-		Usage: "addon to klarity, for generating docs directly from source code",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "output",
-				Aliases: []string{"o"},
-				Usage:   "where should kdoc output the generated docs",
-				Value:   config.CFG.OutputPath,
-			},
-			&cli.StringFlag{
-				Name:    "root",
-				Aliases: []string{"r"},
-				Usage:   "where is the kdoc.toml config file located",
-			},
-			&cli.BoolFlag{
-				Name:    "recurse_scan",
-				Aliases: []string{"rs"},
-				Usage:   "allows kdoc to also scan it's output directory for files to document",
-			},
-			&cli.BoolFlag{
-				Name:    "no-git",
-				Aliases: []string{"ng"},
-				Usage:   "disable git metadata collection, and embedding",
-			},
-		},
-		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-			out = filepath.Clean(c.String("output"))
+var config_path string
 
-			var config_path string
-			if len(c.String("root")) != 0 {
-				root = filepath.Clean(c.String("root"))
-				config_path = filepath.Join(root, "kdoc.toml")
-			} else {
-				var err error
-				root, err = os.Getwd()
-				if err != nil {
-					return ctx, err
-				}
-				config_path = filepath.Join(root, "kdoc.toml")
-			}
+func initState(create_out bool) func(ctx context.Context, c *cli.Command) (context.Context, error) {
+	return func(ctx context.Context, c *cli.Command) (context.Context, error) {
+		out = filepath.Clean(c.String("output"))
 
-			if err := config.Load(config_path); err != nil {
+		if len(c.String("root")) != 0 {
+			root = filepath.Clean(c.String("root"))
+			config_path = filepath.Join(root, "kdoc.toml")
+		} else {
+			var err error
+			root, err = os.Getwd()
+			if err != nil {
 				return ctx, err
 			}
+			config_path = filepath.Join(root, "kdoc.toml")
+		}
 
+		if err := config.Load(config_path); err != nil {
+			return ctx, err
+		}
+
+		if create_out {
 			if err := os.MkdirAll(out, 0755); err != nil {
 				return ctx, err
 			}
+		}
 
-			return ctx, nil
+		return ctx, nil
+	}
+}
+
+var cmds = []*cli.Command{
+	{
+		Name:   "init",
+		Usage:  "initialize the default config, by default uses the working dir, use --root to overwirite",
+		Before: initState(false),
+		Action: func(ctx context.Context, c *cli.Command) error {
+			if err := config.Load(config_path); err != nil {
+				return err
+			}
+
+			fmt.Printf("kdoc initialized succesfully in %s\n\nedit this file to configure kdoc\nor run 'kdoc generate' to build docs\n", config_path)
+
+			return nil
 		},
+	},
+	{
+		Name:    "generate",
+		Aliases: []string{"gen"},
+		Usage:   "uses the defined config values to generate markdown docs from found source files",
+		Before:  initState(true),
 		Action: func(ctx context.Context, c *cli.Command) error {
 			p := parser.Parser{
 				Files:        []parser.File{},
@@ -202,15 +202,25 @@ func main() {
 					continue
 				}
 
-				if enableGit && p.RepoInfo.IsRepo {
-					relPath, err := filepath.Rel(scan_root, filePath)
-					if err == nil {
-						gitInfo, err := git.GetFileInfo(scan_root, relPath)
-						if err != nil {
-							log.Printf("Warning: Could not get git info for %s: %v", filePath, err)
-						} else {
-							f.GitInfo = gitInfo
-						}
+				var relPath string
+				if p.RepoInfo != nil && p.RepoInfo.IsRepo && p.RepoInfo.GitRoot != "" {
+					relPath, err = filepath.Rel(p.RepoInfo.GitRoot, filePath)
+					if err != nil {
+						log.Printf("Warning: failed to get relative path from git root: %v", err)
+						relPath, _ = filepath.Rel(scan_root, filePath)
+					}
+				} else {
+					relPath, _ = filepath.Rel(scan_root, filePath)
+				}
+
+				relPath = filepath.ToSlash(relPath)
+
+				if p.RepoInfo != nil && p.RepoInfo.IsRepo && p.RepoInfo.GitRoot != "" {
+					gitInfo, err := git.GetFileInfo(p.RepoInfo.GitRoot, relPath)
+					if err != nil {
+						log.Printf("Warning: Could not get git info for %s: %v", filePath, err)
+					} else {
+						f.GitInfo = gitInfo
 					}
 				}
 
@@ -252,6 +262,37 @@ func main() {
 
 			return nil
 		},
+	},
+}
+
+func main() {
+	cmd := &cli.Command{
+		Name:  "kdoc",
+		Usage: "addon to klarity, for generating docs directly from source code",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "output",
+				Aliases: []string{"o"},
+				Usage:   "where should kdoc output the generated docs",
+				Value:   config.CFG.OutputPath,
+			},
+			&cli.StringFlag{
+				Name:    "root",
+				Aliases: []string{"r"},
+				Usage:   "where is the kdoc.toml config file located",
+			},
+			&cli.BoolFlag{
+				Name:    "recurse_scan",
+				Aliases: []string{"s"},
+				Usage:   "allows kdoc to also scan it's output directory for files to document",
+			},
+			&cli.BoolFlag{
+				Name:    "no-git",
+				Aliases: []string{"g"},
+				Usage:   "disable git metadata collection, and embedding",
+			},
+		},
+		Commands: cmds,
 	}
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {

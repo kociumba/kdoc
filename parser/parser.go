@@ -275,7 +275,10 @@ func (p *Parser) generateDetailedCard(f *File) string {
 
 	if p.RepoInfo.RepoOwner != "" && p.RepoInfo.RepoName != "" {
 		sb.WriteString("<strong>Repository</strong><br/>\n")
-		fileURL := git.GetFileURL(p.RepoInfo, f.GitInfo.LastCommitHash, f.Path)
+		relPath, _ := filepath.Rel(p.RepoInfo.GitRoot, f.Path)
+		relPath = filepath.ToSlash(relPath)
+		relPath = filepath.Clean(relPath)
+		fileURL := git.GetFileURL(p.RepoInfo, f.GitInfo.LastCommitHash, relPath)
 		if fileURL != "" {
 			sb.WriteString(fmt.Sprintf(
 				"<a href=\"%s\">%s/%s</a><br/>\n",
@@ -324,95 +327,3 @@ func (p *Parser) generateDetailedCard(f *File) string {
 
 	return sb.String()
 }
-
-// func (p *Parser) generateDetailedCard(f *File) string {
-// 	var sb strings.Builder
-
-// 	sb.WriteString("<div style=\"background: linear-gradient(to right, #f6f8fa, #ffffff); border: 1px solid #d0d7de; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);\">\n\n")
-
-// 	sb.WriteString("### File Information\n\n")
-
-// 	sb.WriteString("<table style=\"width: 100%; border-collapse: collapse;\">\n")
-// 	sb.WriteString("<tr style=\"border-bottom: 1px solid #d0d7de;\">\n")
-
-// 	sb.WriteString("<td style=\"padding: 12px; vertical-align: top; width: 50%;\">\n")
-
-// 	commitShort := f.GitInfo.LastCommitHash
-// 	if len(commitShort) > 7 {
-// 		commitShort = commitShort[:7]
-// 	}
-
-// 	sb.WriteString("<strong>Last Update</strong><br/>\n")
-// 	commitURL := git.GetCommitURL(p.RepoInfo, f.GitInfo.LastCommitHash)
-// 	if commitURL != "" {
-// 		sb.WriteString(fmt.Sprintf(
-// 			"<a href=\"%s\" style=\"font-family: monospace; color: #0969da;\">%s</a><br/>\n",
-// 			commitURL, commitShort))
-// 	} else {
-// 		sb.WriteString(fmt.Sprintf("<code>%s</code><br/>\n", commitShort))
-// 	}
-// 	sb.WriteString(fmt.Sprintf("<small style=\"color: #656d76;\">%s</small><br/>\n", f.GitInfo.LastCommitDate))
-
-// 	if f.GitInfo.LastCommitMessage != "" {
-// 		msg := f.GitInfo.LastCommitMessage
-// 		if len(msg) > 60 {
-// 			msg = msg[:57] + "..."
-// 		}
-// 		sb.WriteString(fmt.Sprintf("<em style=\"color: #656d76;\">%s</em>\n", msg))
-// 	}
-
-// 	sb.WriteString("</td>\n")
-
-// 	sb.WriteString("<td style=\"padding: 12px; vertical-align: top; width: 50%;\">\n")
-
-// 	if p.RepoInfo.RepoOwner != "" && p.RepoInfo.RepoName != "" {
-// 		sb.WriteString("<strong>Repository</strong><br/>\n")
-// 		fileURL := git.GetFileURL(p.RepoInfo, f.GitInfo.LastCommitHash, f.Path)
-// 		if fileURL != "" {
-// 			sb.WriteString(fmt.Sprintf(
-// 				"<a href=\"%s\" style=\"color: #0969da;\">%s/%s</a><br/>\n",
-// 				fileURL, p.RepoInfo.RepoOwner, p.RepoInfo.RepoName))
-// 		}
-// 	}
-
-// 	if p.RepoInfo.CurrentBranch != "" {
-// 		sb.WriteString(fmt.Sprintf(
-// 			"<strong>Branch:</strong> <code style=\"background: #f6f8fa; padding: 2px 6px; border-radius: 3px;\">%s</code><br/>\n",
-// 			p.RepoInfo.CurrentBranch))
-// 	}
-
-// 	if f.GitInfo.TotalCommits > 0 {
-// 		sb.WriteString(fmt.Sprintf(
-// 			"<strong>History:</strong> %d commits\n",
-// 			f.GitInfo.TotalCommits))
-// 	}
-
-// 	sb.WriteString("</td>\n")
-// 	sb.WriteString("</tr>\n")
-
-// 	if len(f.GitInfo.Authors) > 0 {
-// 		sb.WriteString("<tr>\n")
-// 		sb.WriteString("<td colspan=\"2\" style=\"padding: 12px;\">\n")
-// 		sb.WriteString("<strong>Contributors</strong><br/>\n")
-// 		sb.WriteString("<div style=\"display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;\">\n")
-
-// 		for _, author := range f.GitInfo.Authors {
-// 			avatarURL := git.GetAvatarURL(p.RepoInfo, author, 40)
-// 			sb.WriteString("<div style=\"display: flex; align-items: center; gap: 8px;\">\n")
-// 			sb.WriteString(fmt.Sprintf(
-// 				"<img src=\"%s\" alt=\"%s\" width=\"32\" height=\"32\" style=\"border-radius: 50%%; border: 2px solid #d0d7de;\" />\n",
-// 				avatarURL, author.Name))
-// 			sb.WriteString(fmt.Sprintf("<span style=\"color: #24292f;\">%s</span>\n", author.Name))
-// 			sb.WriteString("</div>\n")
-// 		}
-
-// 		sb.WriteString("</div>\n")
-// 		sb.WriteString("</td>\n")
-// 		sb.WriteString("</tr>\n")
-// 	}
-
-// 	sb.WriteString("</table>\n\n")
-// 	sb.WriteString("</div>\n\n")
-
-// 	return sb.String()
-// }

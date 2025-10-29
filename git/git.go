@@ -31,6 +31,7 @@ type RepoInfo struct {
 	RepoOwner     string
 	RepoName      string
 	CurrentBranch string
+	GitRoot       string
 }
 
 var (
@@ -53,6 +54,13 @@ func detectRepoInfo(repoPath string) *RepoInfo {
 		return info
 	}
 	info.IsRepo = true
+
+	cmd = exec.Command("git", "-C", repoPath, "rev-parse", "--show-toplevel")
+	if out, err := cmd.Output(); err == nil {
+		info.GitRoot = strings.TrimSpace(string(out))
+	} else {
+		info.GitRoot = repoPath
+	}
 
 	cmd = exec.Command("git", "-C", repoPath, "rev-parse", "--abbrev-ref", "HEAD")
 	if out, err := cmd.Output(); err == nil {
